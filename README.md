@@ -1,102 +1,152 @@
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.ensemble import VotingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import Pipeline
-from nltk.util import ngrams
-import re
-from sklearn import linear_model
+# Delta Parallel Robot - Obstacle Avoidance
+------
+<ins>**A word from me:**</ins> 
 
-fileWriter = open('out.txt','w')
+This is the newest project I want to start working on. After figuring out trajectory planning of Delta Parallel Robot (DPR) in my previous project, I wanted to do something a bit more advanced. So the abmition for this project is:
+**Detect the target object with Image Processing, then move it through dynamic obstacles to reach a certain position.**
 
-mystopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours',
-'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers',
-'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves',
-'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
-'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does',
-'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until',
-'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into',
-'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down',
-'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here',
-'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
-'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
-'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now']
+[FULL RESEARCH OUTLINE](https://github.com/ArthasMenethil-A/Delta-Parallel-Robot-Obstacle-Avoidance/tree/main/Research/Full%20Research%20Outline)
 
-def loadData(fname):
-    reviews=[]
-    labels=[]
-   # count2 = 0
-    f=open(fname)
-    for line in f:
-       # count2 = count2 + 1
-        review,rating=line.strip().split('\t')
-        review = re.sub('not ', 'not', review)
-        review = re.sub('Not ', 'Not', review)
-        review = re.sub('<br>', ' ',review)
-        review = re.sub(' +', ' ',review)
-       # review = re.sub('[^a-z\d]', ' ',review)
-        terms = review.split()
-        reviews.append(review.lower())    
-        labels.append(int(rating))
-    threegrams = ngrams(terms,3)
-    for tg in threegrams:
-        if tg[0] in mystopwords or tg[1] in mystopwords or tg[2] in mystopwords:
-            continue
-  #  print count2  
-    f.close()
-    return reviews,labels
+So ... yeah ... it's a bit of a step up from my last project. If you need to ask any questions, here's my email: 
+arvin1844m@gmail.com
 
-def loadTrainData(fname):
-    reviews=[]
-    f=open(fname)
-    for line in f:
-        review=line.strip()
-        review = re.sub('not ', 'not', review)
-        review = re.sub('Not ', 'Not', review)
-        review = re.sub('<br>', ' ',review)
-        review = re.sub(' +', ' ',review)
-       # review = re.sub('[^a-z\d]', ' ',review)
-        terms = review.split()
-        reviews.append(review.lower())
-    threegrams = ngrams(terms,3)
-    for tg in threegrams:
-        if tg[0] in mystopwords or tg[1] in mystopwords or tg[2] in mystopwords:
-            continue
-    f.close()
-    return reviews
+And here are some of my Articles regarding these researchs: 
+...WIP...
 
-rev_train,labels_train=loadData('training.txt')
-rev_test=loadTrainData('testing.txt')
+Overview:
+- Setup Challenges and Solutions 
+  - Kinematics Errors
+  - Homing Errors 
+- Object Detection
+  - Dataset
+  - Yolo-V5 Implementation and Results
+- References
+
+## 1 - Setup Challenges and Solutions 
+-------
+This section is dedicated to addressing the issues of developement which may result in errors which decreases the overall performance of the robot.
+
+### 1.1 - Modular Code 
+-------
+
+![Delta Parallel Robot](https://github.com/ArthasMenethil-A/Delta-Parallel-Robot-Obstacle-Avoidance/assets/69509720/140d367c-5eec-4489-b82d-ee53d1928131)
+
+First and formost, the ideal way to code the controller is with C++ since it's a lot faster than Python. But since this is for the purpose of research and not industrial use, we're going to make do with Python. But the code needs to be more modular from here onwards. The codes are included [here](https://github.com/ArthasMenethil-A/Delta-Parallel-Robot-Obstacle-Avoidance/tree/main/DPR%20Controller). The files include the following content: 
+
+- `DPR_drivercom.py`: The functions of communication with robot + PID controller
+- `DPR_pathplanning.py`: The functions of Commands for path planning 
+- `delta_robot.py`: The geometry of the robot 
+- `path_planning_mltp.py`: the functions of multi point path planning 
+- `path_planning_ptp.py`: the functions of point to point path planning
+
+### 1.2 - Kinematics Errors
+-------
+
+![DPR scheme](https://github.com/ArthasMenethil-A/Delta-Parallel-Robot-Obstacle-Avoidance/assets/69509720/d15208d6-85fe-4506-92e2-a2755f0116d3)
+
+The problem of kinematic and geometry is this: we design a robot and build it, but the built model will never be a perfect replika to the designed model. In this instance let's say we set the three upper arms of the robot to be 30.9 cm, but the built model will have three arms of 31, 30.5, 31.2 cm. This means the calculations that we simplify in calculating the forward and inverse kinematics will give us a certain error. We don't want that error. The full report on the kinematics study of DPR is included in [this file](https://github.com/ArthasMenethil-A/Delta-Parallel-Robot-Obstacle-Avoidance/blob/main/Research/Kinematic%20Study/DPR___kinematic_study.pdf) [1].
+
+### 1.3 - PID Controller Errors
+-------
+This was pretty simple in conceptual terms. We have a PID controller and the coefficients of kp, ki, kd are not fine-tuned and pretty random. That make the robot slow and inaccurate. So regarding this matter to fix it, in the file `DPR_pathplanning.py` we wrote the following function: 
+
+```
+def PID_goto(last_position, duration):
+   
+
+    kp3 = float(input('kp:\n'))
+    ki3 = float(input('ki:\n'))
+    kd3 = float(input('kd:\n'))
+
+    pid3.set_PID_constants(kp3, ki3, kd3)
+
+    start_time = datetime.datetime.now()
+
+    dtime = 0
+    
+    time_history = []
+    velocity_history = []
 
 
-MNB_pipeline = Pipeline([('vect', CountVectorizer(ngram_range = (1, 2))), 
-                         ('clf', MultinomialNB(alpha = 1.0, fit_prior = True)),
-                        ])
+    while dtime<duration:
 
-KNN_pipeline = Pipeline([('vect', CountVectorizer()), 
-                         ('clf', KNeighborsClassifier(n_neighbors = 20)),
-                        ])
-                        
-SGD_pipeline = Pipeline([('vect', CountVectorizer()),
-                        ('clf', linear_model.SGDClassifier(loss='log')),
-                        ])
-                        
-LR_pipeline = Pipeline([('vect', CountVectorizer()), 
-                        ('tfidf', TfidfTransformer(norm = 'l2', use_idf = True, smooth_idf = True, sublinear_tf = True)),
-                        ('clf', LogisticRegression(warm_start = True, random_state = 1)),
-                       ]) 
-                     
+        last_time = datetime.datetime.now()
+        dtime = (last_time - start_time).total_seconds()
+        time_history.append(dtime)
+        
+        in1 = Position_absolute_read(1)
+        in2 = Position_absolute_read(2)
+        in3 = Position_absolute_read(3)
+        
+        
 
-eclf = VotingClassifier(estimators=[('MNB', MNB_pipeline), ('SGD',SGD_pipeline), ('LR', LR_pipeline)], voting = 'soft', weights = [3,2,3])
-#('KNN', KNN_pipeline), 
+        feedback = [in1, in2, in3]
 
-eclf.fit(rev_train,labels_train)
+        system_input = implement_PID(last_position, feedback)
 
-#use soft voting to predict (majority voting)
-pred=eclf.predict(rev_test)
+        velocity_history.append(system_input)
 
-for x in pred:
-    fileWriter.write(str(x)+'\n')
-fileWriter.close()
+
+        Target_speed_rpm(1, system_input[0])
+        Target_speed_rpm(2, system_input[1])
+        Target_speed_rpm(3, system_input[2])
+        
+    
+    print(np.max(np.abs(np.array(velocity_history)),axis = 0))
+
+    Motion_z_endeffector(0)
+    plt.plot(time_history,velocity_history, label=[["motor1"], ["motor2"], ["motor3"]])
+    plt.legend()
+    plt.show()
+    
+```
+
+Using this function we could basically change the PID values and output a plot of the robot behavior. After starting with the values of $k_p = 0.1, \quad k_i = 0.01, \quad k_d = 0.01$ for all motors, we reach the following values for each motor: 
+
+```
+kp1 = 1.3
+ki1 = 0.0008
+kd1 = 0.12
+
+kp2 = 1.6
+ki2 = 0.0006
+kd2 = 0.1
+
+kp3 = 1.9
+ki3 = 0.0006
+kd3 = 0.1
+```
+
+So the robot movement became incredibly more precise and faster. The precision measured when moving a distance of 20 cm in 0.8 seconds was 0.2 mm which was a huge improvement to previous errros.
+
+
+### 1.4 - Homing Errors
+-------
+*WIP* -Using Microswitch-
+
+
+## 2 - Image Processing
+-------
+You know what object detection is. the first goal of the alogrithm is to detect some classes of objects. Then we have to identify which one is the target and which one is the obstacle. 
+
+## 2.1 - Dataset
+-------
+The dataset used is link [here](https://universe.roboflow.com/delta-parallel-robot-obstacle-avoidance-project/tube-detection-x52mi). The classes of our dataset are:
+
+- Tube - Open
+- Tube - Close
+- Tube - Full
+- Tube Rack
+- Tube Available Space
+- Petridish
+
+
+![Dataset Samples](https://github.com/ArthasMenethil-A/Delta-Parallel-Robot-Obstacle-Avoidance/assets/69509720/cfebec13-f06b-463e-8c68-321850d283dd)
+
+
+
+
+## REFERENCES 
+------
+[1] Kinematic Analysis of Delta Parallel Robot: Simulation Study - A. Eltayeb
+
